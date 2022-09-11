@@ -39,7 +39,6 @@ class ScrabblePoints:
             return 'Undefined'    
         
     def add_total_and_difficulty(self):
-        #self.words_df['ScrabblePoints'] = self.words_df['Answer'].apply( lambda self, x: self.scrabble_word_count(x) )
         self.words_df['ScrabblePoints'] = self.words_df.apply(self.scrabble_word_count, axis=1)
         self.words_df['Difficulty'] = self.words_df.apply(self.difficulty, axis=1)
         self.words_df = self.words_df.astype({'PuzzleNum': 'int64'})

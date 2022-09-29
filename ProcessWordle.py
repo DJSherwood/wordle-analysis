@@ -29,10 +29,8 @@ class ScrabblePoints:
         return res
 
     def difficulty(self, row):
-        if row['ScrabblePoints'] < 9.0:
+        if row['ScrabblePoints'] < 12.0:
             return 'Easy'
-        elif 8.0 < row['ScrabblePoints'] < 12.0: 
-            return 'Medium'
         elif row['ScrabblePoints'] > 11.0: 
             return 'Hard'
         else:
@@ -43,7 +41,7 @@ class ScrabblePoints:
         self.words_df['Difficulty'] = self.words_df.apply(self.difficulty, axis=1)
         self.words_df = self.words_df.astype({'PuzzleNum': 'int64'})
         return self
-
+    
 class ParseWordle:
     def __init__(self, raw_whatsapp_input, wordle_output, name_alias): 
         self.raw_whatsapp_input = raw_whatsapp_input
@@ -98,7 +96,7 @@ class ParseWordle:
         # create data frame
         self.wordle_df = pd.DataFrame(self.wordle_dict)
         return self
-
+    
     def process_data_frame(self):
         # filter out errors
         self.wordle_df = self.wordle_df[self.wordle_df['Wordle'] != 'wordle']
@@ -143,4 +141,3 @@ class ParseWordle:
         # write to csv
         self.final_df.to_csv(self.wordle_output, sep=',', index=False)
         return self
-        

@@ -45,6 +45,9 @@ avg_fails = df2.groupby(['Name','Difficulty']).agg({'Fails': 'mean'}).reset_inde
 # load predictions
 preds = pd.read_csv(censoring.predictions)
 
+# load model output
+model_output = pd.read_csv(censoring.model_output)
+
 ### End Panda manipulation ### 
 
 external_stylesheets = [dbc.themes.CYBORG]
@@ -62,13 +65,29 @@ app.layout = html.Div(
             # Left Div
             html.Div([
                 html.Div([
-                    dcc.RadioItems(id='crossfilter-xaxis-column',
+                    dcc.Dropdown(id='crossfilter-xaxis-column',
                                    options=[{'label': i, 'value': i} for i in player_list],
                                    value='Player1')
                 ]),
                 html.Div([
-                    html.H2(id='total-games-played'),
-                    html.H2(id='avg-fails')
+                    html.H2(id='total-games-played')
+                ]),
+                html.Div([
+                    html.H2(id='avg-fails-easy'),
+                    html.H2(id='avg-fails-hard')
+                ],
+                style={'display':'flex'}
+                ),
+                html.Div([
+                    html.H2(id='model-preds-easy'),
+                    html.H2(id='model-preds-hard')
+                ],
+                style={'dispaly':'flex'}
+                ),
+                html.Div([
+                    dcc.Graph(id='param-dist',
+                              figure=px.scatter(model_output, 
+                                                x=
                 ])
             ],
             style={'width':'49%'}
@@ -129,21 +148,39 @@ def update_total_games(selected_player):
 
 # update avg-fails
 @app.callback(
-    Output('avg-fails', 'children'),
+    Output('avg-fails-easy', 'children'),
     Input('crossfilter-xaxis-column', 'value')
 )
 def update_avg_fails(selected_player):
     filtered_value = avg_fails[ avg_fails.Name == selected_player]['Fails'].values
-    return 'Mean Easy Game Fails {:.2f}, Mean Hard Game Fails {:.2f}'.format(filtered_value[0], filtered_value[1])
+    return 'Easy Fails {:.2f}'.format(filtered_value[0])
 
-# update avg-weekly-fails
+# update avg-fails
 @app.callback(
-    Output('avg-weekly-fails', 'children'), 
+    Output('avg-fails-hard', 'children'),
     Input('crossfilter-xaxis-column', 'value')
 )
-def update_avg_weekly_fails(selected_player):
-    filtered_value = ranking_df[ ranking_df.Name == selected_player ]['MeanWeeklyFails'].values
-    return 'Mean Fails Per Week {:.2f}'.format(filtered_value[0])
+def update_avg_fails(selected_player):
+    filtered_value = avg_fails[ avg_fails.Name == selected_player]['Fails'].values
+    return 'Hard Fails {:.2f}'.format(filtered_value[1])
+
+# update model predictions
+@app.callback(
+    Output('model-preds-easy','children'),
+    Input('crossfilter-xaxis-column', 'value')
+)
+def update_model_preds(selected_player):
+    filtered_value = preds[ preds.Players == selected_player]['prediction'].values
+    return 'Predicted Easy Fails {:.2f}'.format(filtered_value[0])
+
+@app.callback(
+    Output('model-preds-hard','children'),
+    Input('crossfilter-xaxis-column', 'value')
+)
+def update_model_preds(selected_player):
+    filtered_value = preds[ preds.Players == selected_player]['prediction'].values
+    return 'Predicted Hard Fails {:.2f}'.format(filtered_value[1])
+
 
 if __name__ == '__main__':
     # run better without 'mode="jupyterdash"'

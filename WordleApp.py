@@ -49,10 +49,7 @@ preds = pd.read_csv(censoring.predictions)
 model_output = pd.read_csv(censoring.model_output)
 
 ### End Panda manipulation ### 
-
-external_stylesheets = [dbc.themes.CYBORG]
-
-app = JupyterDash(__name__, external_stylesheets=external_stylesheets)
+app = JupyterDash(__name__, external_stylesheets= [dbc.themes.CYBORG])
 
 # Create server variable with Flask server object for use with gunicorn
 server = app.server
@@ -65,29 +62,51 @@ app.layout = html.Div(
             # Left Div
             html.Div([
                 html.Div([
+                    html.H4("Choose Player"),
                     dcc.Dropdown(id='crossfilter-xaxis-column',
                                    options=[{'label': i, 'value': i} for i in player_list],
                                    value='Player1')
                 ]),
                 html.Div([
+                    html.H4('Total Games Played'),
                     html.H2(id='total-games-played')
-                ]),
-                html.Div([
-                    html.H2(id='avg-fails-easy'),
-                    html.H2(id='avg-fails-hard')
                 ],
-                style={'display':'flex'}
+                    style={'display':'flex'}
                 ),
+                # create div for averages
                 html.Div([
-                    html.H2(id='model-preds-easy'),
-                    html.H2(id='model-preds-hard')
+                    # now create div for easy
+                    html.Div([
+                        html.H4("Avg. 'Easy' Fails"),
+                        html.H2(id='avg-fails-easy')
+                    ]),
+                    # now create div for hard
+                    html.Div([
+                        html.H4("Avg. 'Hard' Fails"),
+                        html.H2(id='avg-fails-hard')
+                    ])
                 ],
-                style={'dispaly':'flex'}
+                    style={'display':'flex'}
                 ),
+                # create div for predictions
                 html.Div([
-                    dcc.Graph(id='param-dist',
-                              figure=px.scatter(model_output, 
-                                                x=
+                    # now create div for easy
+                    html.Div([
+                        html.H4("Pred. 'Easy' Fails"),
+                        html.H2(id='model-preds-easy')
+                    ]),
+                    # now create div for hard
+                    html.Div([
+                        html.H4("Pred. 'Hard' Fails"),
+                        html.H2(id='model-preds-hard')
+                    ])
+                ],
+                    style={'display':'flex'}
+                ),
+                # graph of BetaBinomial using found parameters
+                html.Div([
+                    html.H4("Predicted Failure Density"),
+                    dcc.Graph(id='model-output')
                 ])
             ],
             style={'width':'49%'}
@@ -95,15 +114,22 @@ app.layout = html.Div(
             # Right Div
             html.Div([
                 html.Div([
+                    html.H4("Ranking"),
                     dcc.Graph(id='bars-fail-total',
                               figure=px.bar(ranking_df,
                                             x="Fails",
                                             y="Name",
                                             color="Name",
-                                            text_auto=True)
+                                            text_auto=True).update_layout({
+                                  'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+                                  'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+                                  'font': { 'color': '#FFFFFF', 'size':12},
+                                  'showlegend': False,
+                                  })
                              )
                 ]),
                 html.Div([
+                    html.H4("Guess Distribution"),
                     dcc.Graph(id='bars-fail-distribution')
                 ])
             ],
@@ -129,12 +155,50 @@ def update_distplot(selected_player):
         x="Fails", 
         # y="Counts", 
         color="Difficulty", 
+        facet_col="Difficulty",
         text_auto=True
         # barmode="group"
     )
     # now update the figture with a click
-    fig.update_layout(transition_duration=250)
+    fig.update_layout(
+        {'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+         'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+         'font': { 'color': '#FFFFFF', 'size':12}
+        },
+        transition_duration=250
+    )
+    
+    fig.update_yaxes(range=[0.0, 40.0], showgrid=False)
+    fig.update_xaxes(showgrid=False)
 
+    return fig
+            
+            
+@app.callback(
+    Output('model-output', 'figure'),
+    Input('crossfilter-xaxis-column', 'value')
+)
+def update_density(selected_player):
+    filtered_df = model_output[ model_output.Name == selected_player ]
+    fig = px.area(
+        filtered_df, 
+        x="Fails", 
+        y="Density",
+        color="Difficulty",
+        # line_group="Difficulty",
+        facet_col="Difficulty"
+    )
+    # now update the figure with a click
+    fig.update_layout(
+        {'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+         'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+         'font': { 'color': '#FFFFFF', 'size':12}
+        },
+        transition_duration=250
+    )
+    fig.update_yaxes(range=[0.0, 0.5],showgrid=False)
+    fig.update_xaxes(showgrid=False)
+    
     return fig
 
 # update total-games-played
@@ -144,7 +208,7 @@ def update_distplot(selected_player):
 )
 def update_total_games(selected_player):
     filtered_value = total_games[ total_games.Name == selected_player ]['PuzzleNum'].values
-    return 'Total Games Played: {}'.format(filtered_value[0])
+    return '{}'.format(filtered_value[0])
 
 # update avg-fails
 @app.callback(
@@ -153,7 +217,7 @@ def update_total_games(selected_player):
 )
 def update_avg_fails(selected_player):
     filtered_value = avg_fails[ avg_fails.Name == selected_player]['Fails'].values
-    return 'Easy Fails {:.2f}'.format(filtered_value[0])
+    return '{:.2f}'.format(filtered_value[0])
 
 # update avg-fails
 @app.callback(
@@ -162,7 +226,7 @@ def update_avg_fails(selected_player):
 )
 def update_avg_fails(selected_player):
     filtered_value = avg_fails[ avg_fails.Name == selected_player]['Fails'].values
-    return 'Hard Fails {:.2f}'.format(filtered_value[1])
+    return '{:.2f}'.format(filtered_value[1])
 
 # update model predictions
 @app.callback(
@@ -171,7 +235,7 @@ def update_avg_fails(selected_player):
 )
 def update_model_preds(selected_player):
     filtered_value = preds[ preds.Players == selected_player]['prediction'].values
-    return 'Predicted Easy Fails {:.2f}'.format(filtered_value[0])
+    return '{:.2f}'.format(filtered_value[0])
 
 @app.callback(
     Output('model-preds-hard','children'),
@@ -179,7 +243,7 @@ def update_model_preds(selected_player):
 )
 def update_model_preds(selected_player):
     filtered_value = preds[ preds.Players == selected_player]['prediction'].values
-    return 'Predicted Hard Fails {:.2f}'.format(filtered_value[1])
+    return '{:.2f}'.format(filtered_value[1])
 
 
 if __name__ == '__main__':
